@@ -2,7 +2,7 @@ import escape from 'escape-regexp'
 import mongoose from 'mongoose'
 
 /**
- * Changes AdminBro's {@link Filter} to an object acceptible by a mongoose query.
+ * Changes AdminBro's {@link Filter} to an object acceptable by a mongoose query.
  *
  * @param {Filter} filter
  * @private
@@ -13,34 +13,42 @@ export const convertFilter = (filter) => {
   }
   return filter.reduce((memo, filterProperty) => {
     const { property, value } = filterProperty
-    switch (property.type()) {
-    case 'string':
+    
+    if(mongoose.Types.ObjectId.isValid(value)) {
       return {
-        [property.name()]: { $regex: escape(value), $options: 'i' },
+        _id: mongoose.Types.ObjectId(value),
         ...memo,
       }
-    case 'date':
-    case 'datetime':
-      if (value.from || value.to) {
+    }
+    
+    switch (property.type()) {
+      case 'string':
         return {
-          [property.name()]: {
-            ...value.from && { $gte: value.from },
-            ...value.to && { $lte: value.to },
-          },
+          [property.name()]: { $regex: escape(value), $options: 'i' },
           ...memo,
         }
-      }
-      break
-    case 'id':
-      if (mongoose.Types.ObjectId.isValid(value)) {
-        return {
-          [property.name()]: value,
-          ...memo,
+      case 'date':
+      case 'datetime':
+        if (value.from || value.to) {
+          return {
+            [property.name()]: {
+              ...value.from && { $gte: value.from },
+              ...value.to && { $lte: value.to },
+            },
+            ...memo,
+          }
         }
-      }
-      return {}
-    default:
-      break
+        break
+      case 'id':
+        if (mongoose.Types.ObjectId.isValid(value)) {
+          return {
+            [property.name()]: value,
+            ...memo,
+          }
+        }
+        return {}
+      default:
+        break
     }
     return {
       [property.name()]: value,
